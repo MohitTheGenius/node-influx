@@ -47,6 +47,26 @@ For browsers, see the [browser setup](https://node-influx.github.io/manual/usage
  * Fully supported in Node and the browser
  * Performant, processing millions of rows/sec on modest hardware
  * Zero dependencies
+ * Influx Relay Supported
+
+
+## Influx Relay Functionality
+
+ * Normal "query" and "writepoints" supported.
+ * "Admin" query suported for delete or drop operations 
+
+```js
+// Access "Admin" query example:
+
+// Drop measurements 
+influx.queryRaw('drop measurement <name>', { apiEndPoint: '/admin' }).then(console.log).catch(console.log);
+
+
+// Delete record 
+influx.queryRaw('delete from <name> where <condition>', { apiEndPoint: '/admin' }).then(console.log).catch(console.log);
+
+```
+
 
 ## Compatibility
 

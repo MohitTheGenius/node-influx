@@ -4,6 +4,7 @@
 
 import {RequestOptions} from 'https';
 import * as url from 'url';
+import * as querystring from 'querystring';
 
 import * as b from './builder';
 import * as grammar from './grammar';
@@ -177,6 +178,11 @@ export interface IQueryOptions {
    * database is not provided in Influx.
    */
 	database?: string;
+
+	/**
+	 * Influx Relay: Influx DB http endpoint for Influx Relay database
+	 */
+	apiEndPoint?: string;
 }
 
 /**
@@ -1334,14 +1340,26 @@ export class InfluxDB {
 			query = query.join(';');
 		}
 
-		return this._pool.json(
-			this._getQueryOpts({
+		// For Influx Relay: default apiEndPoint is /query
+		const path = options.apiEndPoint || '/query';
+		// For Influx Relay: for /admin query make POST request instead of GET
+		const method = options.apiEndPoint == '/admin' ? 'POST' : 'GET';
+
+		// query options are taken as seperate object
+		const queryOptions = this._getQueryOpts({
 				db: database,
 				epoch: options.precision,
 				q: query,
 				rp: retentionPolicy
-			}),
+			},
+			method,
+			path
 		);
+
+		// For Influx Relay: for admin query return raw text result instead of json
+		return path == '/admin' ?
+			this._pool.text(queryOptions) :
+			this._pool.json(queryOptions);
 	}
 
 	/**
@@ -1383,16 +1401,29 @@ export class InfluxDB {
    * Creates options to be passed into the pool to query databases.
    * @private
    */
-	private _getQueryOpts(params: any, method: string = 'GET'): any {
-		return {
+	private _getQueryOpts(params: any, method: string = 'GET', path: string = '/query'): any {
+		// query options are taken as seperate object
+		const queryOpt: any = {
 			method,
-			path: '/query',
-			query: {
+			path
+		};
+
+		// For Influx Relay: for admin query add params in body as url stringinfy
+		if (path == '/admin' && method.toLocaleLowerCase() == 'post') {
+			queryOpt['body'] = querystring.stringify({
 				p: this._options.password,
 				u: this._options.username,
 				...params
-			}
-		};
+			});
+		} else {
+			queryOpt['query'] = {
+				p: this._options.password,
+				u: this._options.username,
+				...params
+			};
+		}
+
+		return queryOpt;
 	}
 
 	/**

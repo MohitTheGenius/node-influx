@@ -354,13 +354,22 @@ export class Pool {
 
 		let path = host.url.pathname === '/' ? '' : host.url.pathname;
 		path += options.path;
+
+		// Header is taken as seperate object
+		const headers: any = { 'content-length': options.body ? Buffer.from(options.body).length : 0 };
+
+		// For Influx Relay: for /admin query add content type
+		if (path == '/admin') {
+			headers['Content-Type'] = 'application/x-www-form-urlencoded';
+		}
+
 		if (options.query) {
 			path += '?' + querystring.stringify(options.query);
 		}
 
 		const req = request(
 			{
-				headers: {'content-length': options.body ? Buffer.from(options.body).length : 0},
+				headers,
 				hostname: host.url.hostname,
 				method: options.method,
 				path,
